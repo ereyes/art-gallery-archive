@@ -1,0 +1,6 @@
+1:"$Sreact.fragment"
+2:I[3906,[],"ViewportBoundary"]
+3:I[3906,[],"MetadataBoundary"]
+4:"$Sreact.suspense"
+5:I[6599,[],"IconMark"]
+0:{"rsc":["$","$1","h",{"children":[["$","meta",null,{"name":"robots","content":"noindex"}],["$","$L2",null,{"children":[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}]]}],["$","div",null,{"hidden":true,"children":["$","$L3",null,{"children":["$","$4",null,{"name":"Next.Metadata","children":[["$","title","0",{"children":"In-Betweens — SIGGRAPH 2026 Art Gallery Archive"}],["$","meta","1",{"name":"description","content":"The archive of In-Betweens, the ACM SIGGRAPH 2026 Art Gallery in Los Angeles."}],["$","link","2",{"rel":"shortcut icon","href":"./favicon.svg"}],["$","link","3",{"rel":"icon","href":"./favicon.svg"}],["$","$L5","4",{}]]}]}]}],null]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"_uj7tXckt37FEWMu4K4Qt"}
