@@ -1,0 +1,1974 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SIGGRAPH 2026 Delaunay Background Generator</title>
+  <style>
+    :root {
+      --archive-bar-height: 38px;
+      --ink: #2A4249;
+      --sand: #D2C5B2;
+      --cream: #F1EFE3;
+      --white: #FFFFFF;
+      --panel: rgba(255, 255, 255, 0.94);
+      --line: rgba(42, 66, 73, 0.18);
+      --shadow: 0 18px 54px rgba(20, 40, 46, 0.16);
+    }
+
+    @font-face {
+      font-family: "Luxe Uno";
+      src: url("../fonts/luxe-uno/LuxeUno-Regular.woff2") format("woff2");
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: "Luxe Uno";
+      src: url("../fonts/luxe-uno/LuxeUno-Bold.woff2") format("woff2");
+      font-style: normal;
+      font-weight: 700;
+      font-display: swap;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      color: var(--ink);
+      background: var(--cream);
+      font-family: "Luxe Uno", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      padding-top: var(--archive-bar-height);
+      background:
+        radial-gradient(circle at 88% 10%, rgba(210, 197, 178, 0.45), transparent 31rem),
+        linear-gradient(135deg, #f7f5ed 0%, #ebe7da 100%);
+    }
+
+    .archive-bar {
+      position: fixed;
+      inset: 0 0 auto;
+      z-index: 100;
+      display: flex;
+      height: var(--archive-bar-height);
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 0 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      background: #070807;
+      color: #f5f4ed;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.035em;
+    }
+
+    .archive-bar a {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .archive-bar a:hover,
+    .archive-bar a:focus-visible {
+      color: #dfff00;
+    }
+
+    .archive-bar a:focus-visible {
+      outline: 1px solid #dfff00;
+      outline-offset: 4px;
+    }
+
+    .archive-bar-label {
+      color: rgba(245, 244, 237, 0.58);
+      font-weight: 400;
+    }
+
+    button, input, select {
+      max-width: 100%;
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+    }
+
+    .app {
+      min-height: calc(100vh - var(--archive-bar-height));
+      display: grid;
+      grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+    }
+
+    .sidebar {
+      position: sticky;
+      top: var(--archive-bar-height);
+      height: calc(100vh - var(--archive-bar-height));
+      overflow-y: auto;
+      padding: 24px 22px 34px;
+      background: var(--panel);
+      border-right: 1px solid var(--line);
+      backdrop-filter: blur(14px);
+      z-index: 3;
+    }
+
+    .brand {
+      margin-bottom: 22px;
+    }
+
+    .eyebrow {
+      margin: 0 0 5px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.15em;
+      color: rgba(42, 66, 73, 0.62);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.35rem, 2vw, 1.8rem);
+      line-height: 1.08;
+      letter-spacing: -0.035em;
+    }
+
+    .intro {
+      margin: 10px 0 0;
+      color: rgba(42, 66, 73, 0.72);
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .control-card {
+      min-width: 0;
+      margin-top: 14px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.72);
+      box-shadow: 0 7px 22px rgba(42, 66, 73, 0.05);
+    }
+
+    .control-card h2 {
+      margin: 0 0 13px;
+      font-size: 0.78rem;
+      letter-spacing: 0.105em;
+      color: rgba(42, 66, 73, 0.72);
+    }
+
+    .field {
+      display: grid;
+      min-width: 0;
+      gap: 7px;
+      margin-bottom: 13px;
+    }
+
+    .field:last-child { margin-bottom: 0; }
+
+    .label-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    label,
+    .label-text {
+      font-size: 0.86rem;
+      font-weight: 700;
+    }
+
+    output,
+    .value-note {
+      font-size: 0.78rem;
+      color: rgba(42, 66, 73, 0.65);
+    }
+
+    output { white-space: nowrap; }
+
+    .value-note {
+      min-width: 0;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      line-height: 1.35;
+    }
+
+    select,
+    input[type="number"],
+    input[type="text"] {
+      width: 100%;
+      min-height: 39px;
+      border: 1px solid rgba(42, 66, 73, 0.22);
+      border-radius: 10px;
+      padding: 8px 10px;
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.9);
+      outline: none;
+    }
+
+    select:focus,
+    input:focus {
+      border-color: rgba(42, 66, 73, 0.62);
+      box-shadow: 0 0 0 3px rgba(42, 66, 73, 0.09);
+    }
+
+    input[type="range"] {
+      display: block;
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+      margin: 0;
+      padding: 0;
+      accent-color: var(--ink);
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .two-col > *,
+    .unit-wrap > *,
+    .palette-grid > * {
+      min-width: 0;
+    }
+
+    .unit-wrap {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .mini-label {
+      display: block;
+      margin: 0 0 5px;
+      font-size: 0.72rem;
+      color: rgba(42, 66, 73, 0.66);
+    }
+
+    .palette-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .color-field {
+      display: grid;
+      grid-template-columns: 38px 1fr;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    input[type="color"] {
+      width: 38px;
+      height: 38px;
+      padding: 2px;
+      border: 1px solid rgba(42, 66, 73, 0.2);
+      border-radius: 10px;
+      background: white;
+      cursor: pointer;
+    }
+
+    .color-copy {
+      min-width: 0;
+    }
+
+    .color-copy strong,
+    .color-copy code {
+      display: block;
+    }
+
+    .color-copy strong {
+      margin-bottom: 2px;
+      font-size: 0.75rem;
+    }
+
+    .color-copy code {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 0.72rem;
+      color: rgba(42, 66, 73, 0.62);
+    }
+
+    .check-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 0.84rem;
+      font-weight: 700;
+    }
+
+    input[type="checkbox"] {
+      width: 17px;
+      height: 17px;
+      accent-color: var(--ink);
+    }
+
+    .layer-toggle-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .layer-toggle {
+      display: grid;
+      min-width: 0;
+      place-items: center;
+      gap: 6px;
+      padding: 10px 5px;
+      border: 1px solid rgba(42, 66, 73, 0.18);
+      border-radius: 11px;
+      background: rgba(255, 255, 255, 0.72);
+      text-align: center;
+      cursor: pointer;
+    }
+
+    .layer-toggle:has(input:checked) {
+      border-color: rgba(42, 66, 73, 0.58);
+      background: rgba(210, 197, 178, 0.34);
+      box-shadow: inset 0 0 0 1px rgba(42, 66, 73, 0.08);
+    }
+
+    .layer-toggle input {
+      margin: 0;
+    }
+
+    .layer-toggle span {
+      font-size: 0.74rem;
+      font-weight: 800;
+      line-height: 1.15;
+    }
+
+    .action-stack {
+      display: grid;
+      gap: 9px;
+      margin-top: 18px;
+    }
+
+    .btn {
+      min-height: 44px;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-weight: 800;
+      transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
+    }
+
+    .btn:hover { transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    .btn:disabled { opacity: 0.55; cursor: wait; }
+
+    .btn-primary {
+      color: white;
+      background: var(--ink);
+      box-shadow: 0 8px 20px rgba(42, 66, 73, 0.22);
+    }
+
+    .btn-secondary {
+      color: var(--ink);
+      background: var(--sand);
+    }
+
+    .btn-light {
+      color: var(--ink);
+      background: white;
+      border: 1px solid var(--line);
+    }
+
+    .side-note {
+      margin: 13px 2px 0;
+      font-size: 0.76rem;
+      line-height: 1.45;
+      color: rgba(42, 66, 73, 0.62);
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      min-width: 0;
+      height: calc(100vh - var(--archive-bar-height));
+      overflow: hidden;
+      gap: 14px;
+      padding: 16px clamp(14px, 2.2vw, 30px);
+    }
+
+    .workspace-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-width: 0;
+      gap: 16px;
+      margin: 0;
+    }
+
+    .status {
+      min-width: 0;
+    }
+
+    .status-title {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 850;
+    }
+
+    .status-meta {
+      margin: 4px 0 0;
+      font-size: 0.82rem;
+      color: rgba(42, 66, 73, 0.66);
+    }
+
+    .export-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 9px;
+    }
+
+    .export-row .btn {
+      min-height: 40px;
+      padding: 8px 13px;
+      font-size: 0.84rem;
+    }
+
+    .preview-shell {
+      display: grid;
+      place-items: center;
+      min-width: 0;
+      min-height: 0;
+      height: 100%;
+      overflow: hidden;
+      padding: clamp(10px, 1.7vw, 20px);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background:
+        linear-gradient(45deg, rgba(42,66,73,0.035) 25%, transparent 25%) 0 0 / 24px 24px,
+        linear-gradient(-45deg, rgba(42,66,73,0.035) 25%, transparent 25%) 0 12px / 24px 24px,
+        linear-gradient(45deg, transparent 75%, rgba(42,66,73,0.035) 75%) 12px -12px / 24px 24px,
+        linear-gradient(-45deg, transparent 75%, rgba(42,66,73,0.035) 75%) -12px 0 / 24px 24px,
+        rgba(255,255,255,0.58);
+      box-shadow: var(--shadow);
+    }
+
+    .stage {
+      position: relative;
+      flex: none;
+      width: min(100%, 660px);
+      max-width: 100%;
+      max-height: 100%;
+      aspect-ratio: 2 / 3;
+      overflow: hidden;
+      border-radius: 4px;
+      background: var(--cream);
+      box-shadow: 0 22px 55px rgba(42, 66, 73, 0.22);
+      transition: aspect-ratio 180ms ease;
+    }
+
+    #artwork {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .safe-guide {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 58%;
+      height: 54%;
+      transform: translate(-50%, -50%);
+      border: 2px dashed rgba(42, 66, 73, 0.48);
+      border-radius: 18px;
+      box-shadow: 0 0 0 9999px rgba(255, 255, 255, 0.035);
+      pointer-events: none;
+      transition: opacity 150ms ease, width 150ms ease, height 150ms ease;
+    }
+
+    .safe-guide::after {
+      content: "text-safe guide · preview only";
+      position: absolute;
+      left: 50%;
+      bottom: 8px;
+      transform: translateX(-50%);
+      padding: 4px 8px;
+      border-radius: 999px;
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.83);
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+
+    .variations-section {
+      min-width: 0;
+      margin: 0;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 16px;
+      margin-bottom: 8px;
+    }
+
+    .section-head h2 {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .section-head p {
+      margin: 0;
+      font-size: 0.78rem;
+      color: rgba(42, 66, 73, 0.62);
+    }
+
+    .variation-grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      min-width: 0;
+      gap: 8px;
+    }
+
+    .variation {
+      position: relative;
+      display: block;
+      min-width: 0;
+      height: clamp(88px, 14vh, 132px);
+      padding: 0;
+      overflow: hidden;
+      border: 3px solid transparent;
+      border-radius: 12px;
+      background: white;
+      box-shadow: 0 8px 22px rgba(42, 66, 73, 0.12);
+      transition: transform 120ms ease, border-color 120ms ease;
+    }
+
+    .variation:hover { transform: translateY(-2px); }
+    .variation.selected { border-color: var(--ink); }
+
+    .variation svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: var(--cream);
+    }
+
+    .variation span {
+      position: absolute;
+      left: 7px;
+      bottom: 7px;
+      padding: 3px 6px;
+      border-radius: 999px;
+      color: white;
+      background: rgba(42, 66, 73, 0.82);
+      font-size: 0.62rem;
+      font-weight: 800;
+    }
+
+    .busy-overlay {
+      position: fixed;
+      inset: var(--archive-bar-height) 0 0;
+      z-index: 20;
+      display: grid;
+      place-items: center;
+      background: rgba(241, 239, 227, 0.58);
+      backdrop-filter: blur(3px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 120ms ease;
+    }
+
+    .busy-overlay.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .busy-card {
+      padding: 14px 18px;
+      border-radius: 12px;
+      color: white;
+      background: var(--ink);
+      box-shadow: var(--shadow);
+      font-weight: 800;
+    }
+
+    .toast {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      z-index: 30;
+      max-width: min(420px, calc(100vw - 44px));
+      padding: 12px 15px;
+      border-radius: 12px;
+      color: white;
+      background: var(--ink);
+      box-shadow: var(--shadow);
+      font-size: 0.84rem;
+      line-height: 1.4;
+      opacity: 0;
+      transform: translateY(12px);
+      pointer-events: none;
+      transition: opacity 160ms ease, transform 160ms ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 820px) {
+      .app { display: block; }
+      .sidebar {
+        position: relative;
+        top: auto;
+        width: 100%;
+        height: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .workspace {
+        display: block;
+        height: auto;
+        min-height: calc(100vh - var(--archive-bar-height));
+        overflow: visible;
+        padding-top: 20px;
+      }
+      .workspace-top {
+        align-items: flex-start;
+        flex-direction: column;
+        margin-bottom: 18px;
+      }
+      .export-row { justify-content: flex-start; }
+      .preview-shell {
+        height: auto;
+        min-height: 0;
+      }
+      .stage {
+        width: min(100%, 660px);
+        height: auto;
+      }
+      .variations-section { margin-top: 28px; }
+      .variation-grid {
+        grid-template-columns: repeat(3, minmax(105px, 1fr));
+        gap: 12px;
+      }
+      .variation {
+        height: auto;
+        aspect-ratio: var(--art-ratio, 2 / 3);
+      }
+    }
+
+    @media (max-width: 520px) {
+      .archive-bar-label { display: none; }
+      .variation-grid { grid-template-columns: repeat(2, minmax(105px, 1fr)); }
+      .two-col, .unit-wrap { grid-template-columns: 1fr; }
+      .palette-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header class="archive-bar">
+    <a href="../#wall-clings" aria-label="Back to the Wall Clings section">
+      <span aria-hidden="true">←</span>
+      <span>Back to Archive</span>
+    </a>
+    <span class="archive-bar-label">Delaunay Background Generator</span>
+  </header>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <p class="eyebrow">Wall-Cling Background Tool</p>
+        <h1>SIGGRAPH 2026 Delaunay Generator</h1>
+        <p class="intro">Create portrait tessellations with a pale text-safe center, darker perimeter, variable opacity, and independently selectable fill, line, and point layers.</p>
+      </div>
+
+      <section class="control-card">
+        <h2>Composition</h2>
+
+        <div class="field">
+          <label for="preset">Preset</label>
+          <select id="preset">
+            <option value="gallery">Gallery text-safe</option>
+            <option value="soft">Soft neutral</option>
+            <option value="frame">Strong dark frame</option>
+            <option value="texture">High texture</option>
+            <option value="even">Even field</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <div class="label-row">
+            <label for="pointCount">Mesh points</label>
+            <output id="pointCountValue">260</output>
+          </div>
+          <input id="pointCount" type="range" min="120" max="520" value="260" step="10" />
+          <div class="value-note">Usually produces roughly 500–750 triangles after edge anchors.</div>
+        </div>
+
+        <div class="field">
+          <div class="label-row">
+            <label for="irregularity">Shape variation</label>
+            <output id="irregularityValue">78%</output>
+          </div>
+          <input id="irregularity" type="range" min="0" max="100" value="78" />
+        </div>
+
+        <div class="field">
+          <div class="label-row">
+            <label for="clustering">Local clustering</label>
+            <output id="clusteringValue">24%</output>
+          </div>
+          <input id="clustering" type="range" min="0" max="70" value="24" />
+        </div>
+
+        <div class="field">
+          <div class="label-row">
+            <label for="centerLight">Center lightness</label>
+            <output id="centerLightValue">88%</output>
+          </div>
+          <input id="centerLight" type="range" min="0" max="100" value="88" />
+        </div>
+
+        <div class="field">
+          <div class="label-row">
+            <label for="centerRadius">Clear-center radius</label>
+            <output id="centerRadiusValue">68%</output>
+          </div>
+          <input id="centerRadius" type="range" min="35" max="90" value="68" />
+        </div>
+
+        <div class="field">
+          <div class="label-row">
+            <label for="borderDark">Border darkness</label>
+            <output id="borderDarkValue">86%</output>
+          </div>
+          <input id="borderDark" type="range" min="0" max="100" value="86" />
+        </div>
+      </section>
+
+      <section class="control-card">
+        <h2>Texture</h2>
+        <div class="two-col">
+          <div class="field">
+            <div class="label-row">
+              <label for="opacityMin">Opacity min</label>
+              <output id="opacityMinValue">18%</output>
+            </div>
+            <input id="opacityMin" type="range" min="5" max="75" value="18" />
+          </div>
+          <div class="field">
+            <div class="label-row">
+              <label for="opacityMax">Opacity max</label>
+              <output id="opacityMaxValue">78%</output>
+            </div>
+            <input id="opacityMax" type="range" min="20" max="100" value="78" />
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="field">
+            <div class="label-row">
+              <label for="lineOpacity">Edge opacity</label>
+              <output id="lineOpacityValue">12%</output>
+            </div>
+            <input id="lineOpacity" type="range" min="0" max="45" value="12" />
+          </div>
+          <div class="field">
+            <div class="label-row">
+              <label for="lineWidth">Edge width</label>
+              <output id="lineWidthValue">0.7</output>
+            </div>
+            <input id="lineWidth" type="range" min="0" max="2.5" value="0.7" step="0.1" />
+          </div>
+        </div>
+      </section>
+
+      <section class="control-card">
+        <h2>Layers</h2>
+
+        <div class="field">
+          <label for="layerMode">Layer preset</label>
+          <select id="layerMode">
+            <option value="fills-lines" selected>Fills + lines</option>
+            <option value="fills">Fills only</option>
+            <option value="lines">Lines only</option>
+            <option value="points">Points only</option>
+            <option value="lines-points">Lines + points</option>
+            <option value="fills-points">Fills + points</option>
+            <option value="all">All layers</option>
+            <option value="custom">Custom combination</option>
+          </select>
+        </div>
+
+        <div class="layer-toggle-grid" aria-label="Visible artwork layers">
+          <label class="layer-toggle">
+            <input id="showFills" type="checkbox" checked />
+            <span>Triangle fills</span>
+          </label>
+          <label class="layer-toggle">
+            <input id="showLines" type="checkbox" checked />
+            <span>Mesh lines</span>
+          </label>
+          <label class="layer-toggle">
+            <input id="showPoints" type="checkbox" />
+            <span>Mesh points</span>
+          </label>
+        </div>
+
+        <div class="field">
+          <div class="label-row">
+            <label for="fillCoverage">Fill coverage</label>
+            <output id="fillCoverageValue">100%</output>
+          </div>
+          <input id="fillCoverage" type="range" min="0" max="100" value="100" />
+        </div>
+
+        <div class="two-col">
+          <div class="field">
+            <div class="label-row">
+              <label for="lineCoverage">Line coverage</label>
+              <output id="lineCoverageValue">100%</output>
+            </div>
+            <input id="lineCoverage" type="range" min="0" max="100" value="100" />
+          </div>
+          <div class="field">
+            <div class="label-row">
+              <label for="pointCoverage">Point coverage</label>
+              <output id="pointCoverageValue">100%</output>
+            </div>
+            <input id="pointCoverage" type="range" min="0" max="100" value="100" />
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="field">
+            <div class="label-row">
+              <label for="pointOpacity">Point opacity</label>
+              <output id="pointOpacityValue">68%</output>
+            </div>
+            <input id="pointOpacity" type="range" min="0" max="100" value="68" />
+          </div>
+          <div class="field">
+            <div class="label-row">
+              <label for="pointSize">Point size</label>
+              <output id="pointSizeValue">3.2</output>
+            </div>
+            <input id="pointSize" type="range" min="0.5" max="12" value="3.2" step="0.1" />
+          </div>
+        </div>
+
+        <div class="value-note">Coverage controls let you render a deterministic subset of each selected layer.</div>
+      </section>
+
+      <section class="control-card">
+        <h2>Palette</h2>
+        <div class="palette-grid">
+          <label class="color-field">
+            <input id="colorWhite" type="color" value="#ffffff" aria-label="White palette color" />
+            <span class="color-copy"><strong>White</strong><code id="colorWhiteCode">#FFFFFF</code></span>
+          </label>
+          <label class="color-field">
+            <input id="colorDark" type="color" value="#2a4249" aria-label="Dark palette color" />
+            <span class="color-copy"><strong>7546 C</strong><code id="colorDarkCode">#2A4249</code></span>
+          </label>
+          <label class="color-field">
+            <input id="colorSand" type="color" value="#d2c5b2" aria-label="Sand palette color" />
+            <span class="color-copy"><strong>4755 C</strong><code id="colorSandCode">#D2C5B2</code></span>
+          </label>
+          <label class="color-field">
+            <input id="colorCream" type="color" value="#f1efe3" aria-label="Cream palette color" />
+            <span class="color-copy"><strong>P 1-9 C</strong><code id="colorCreamCode">#F1EFE3</code></span>
+          </label>
+        </div>
+      </section>
+
+      <section class="control-card">
+        <h2>Output</h2>
+        <div class="unit-wrap">
+          <div>
+            <label class="mini-label" for="widthIn">Width (inches)</label>
+            <input id="widthIn" type="number" min="1" max="240" value="40" step="0.1" />
+          </div>
+          <div>
+            <label class="mini-label" for="heightIn">Height (inches)</label>
+            <input id="heightIn" type="number" min="1" max="360" value="60" step="0.1" />
+          </div>
+        </div>
+        <p class="side-note" id="metricSize">101.6 × 152.4 cm</p>
+
+        <div class="field" style="margin-top: 13px;">
+          <label for="pngWidth">PNG export width</label>
+          <select id="pngWidth">
+            <option value="1200">1,200 px</option>
+            <option value="2400">2,400 px</option>
+            <option value="4000" selected>4,000 px</option>
+            <option value="6000">6,000 px</option>
+          </select>
+          <div class="value-note" id="pngDimensions">4,000 × 6,000 px</div>
+        </div>
+
+        <div class="field">
+          <label for="seedInput">Seed</label>
+          <input id="seedInput" type="number" value="2026" step="1" />
+        </div>
+
+        <div class="check-row">
+          <input id="guideToggle" type="checkbox" checked />
+          <label for="guideToggle">Show text-safe guide</label>
+        </div>
+
+        <div class="two-col" style="margin-top: 12px;">
+          <div class="field">
+            <div class="label-row">
+              <label for="guideWidth">Guide width</label>
+              <output id="guideWidthValue">58%</output>
+            </div>
+            <input id="guideWidth" type="range" min="30" max="85" value="58" />
+          </div>
+          <div class="field">
+            <div class="label-row">
+              <label for="guideHeight">Guide height</label>
+              <output id="guideHeightValue">54%</output>
+            </div>
+            <input id="guideHeight" type="range" min="25" max="85" value="54" />
+          </div>
+        </div>
+      </section>
+
+      <div class="action-stack">
+        <button class="btn btn-primary" id="newVersion">Generate new version</button>
+        <button class="btn btn-secondary" id="generateSet">Generate six variations</button>
+        <button class="btn btn-light" id="applySeed">Render entered seed</button>
+      </div>
+
+      <p class="side-note">SVG is the recommended production format for a 40 × 60 inch wall cling. It exports at the physical dimensions above and remains fully vector. PNG is intended for proofs or raster workflows.</p>
+    </aside>
+
+    <main class="workspace">
+      <div class="workspace-top">
+        <div class="status">
+          <p class="status-title">Selected composition</p>
+          <p class="status-meta" id="statusMeta">Preparing artwork…</p>
+        </div>
+        <div class="export-row">
+          <button class="btn btn-light" id="downloadSvg">Download SVG</button>
+          <button class="btn btn-primary" id="downloadPng">Download PNG</button>
+        </div>
+      </div>
+
+      <section class="preview-shell" id="previewShell" aria-label="Selected tessellation preview">
+        <div class="stage" id="stage">
+          <svg id="artwork" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Delaunay tessellation preview"></svg>
+          <div class="safe-guide" id="safeGuide"></div>
+        </div>
+      </section>
+
+      <section class="variations-section">
+        <div class="section-head">
+          <div>
+            <h2>Variation set</h2>
+            <p>Click a thumbnail to select it for export.</p>
+          </div>
+          <p id="variationStatus">Six deterministic seeds</p>
+        </div>
+        <div class="variation-grid" id="variationGrid"></div>
+      </section>
+    </main>
+  </div>
+
+  <div class="busy-overlay" id="busyOverlay" aria-hidden="true">
+    <div class="busy-card" id="busyText">Generating tessellation…</div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const SVG_NS = "http://www.w3.org/2000/svg";
+      const $ = (id) => document.getElementById(id);
+
+      const controls = {
+        preset: $("preset"),
+        pointCount: $("pointCount"),
+        irregularity: $("irregularity"),
+        clustering: $("clustering"),
+        centerLight: $("centerLight"),
+        centerRadius: $("centerRadius"),
+        borderDark: $("borderDark"),
+        opacityMin: $("opacityMin"),
+        opacityMax: $("opacityMax"),
+        lineOpacity: $("lineOpacity"),
+        lineWidth: $("lineWidth"),
+        layerMode: $("layerMode"),
+        showFills: $("showFills"),
+        showLines: $("showLines"),
+        showPoints: $("showPoints"),
+        fillCoverage: $("fillCoverage"),
+        lineCoverage: $("lineCoverage"),
+        pointCoverage: $("pointCoverage"),
+        pointOpacity: $("pointOpacity"),
+        pointSize: $("pointSize"),
+        colorWhite: $("colorWhite"),
+        colorDark: $("colorDark"),
+        colorSand: $("colorSand"),
+        colorCream: $("colorCream"),
+        widthIn: $("widthIn"),
+        heightIn: $("heightIn"),
+        pngWidth: $("pngWidth"),
+        seedInput: $("seedInput"),
+        guideToggle: $("guideToggle"),
+        guideWidth: $("guideWidth"),
+        guideHeight: $("guideHeight")
+      };
+
+      const valueBindings = [
+        ["pointCount", "pointCountValue", (v) => String(v)],
+        ["irregularity", "irregularityValue", (v) => `${v}%`],
+        ["clustering", "clusteringValue", (v) => `${v}%`],
+        ["centerLight", "centerLightValue", (v) => `${v}%`],
+        ["centerRadius", "centerRadiusValue", (v) => `${v}%`],
+        ["borderDark", "borderDarkValue", (v) => `${v}%`],
+        ["opacityMin", "opacityMinValue", (v) => `${v}%`],
+        ["opacityMax", "opacityMaxValue", (v) => `${v}%`],
+        ["lineOpacity", "lineOpacityValue", (v) => `${v}%`],
+        ["lineWidth", "lineWidthValue", (v) => Number(v).toFixed(1)],
+        ["fillCoverage", "fillCoverageValue", (v) => `${v}%`],
+        ["lineCoverage", "lineCoverageValue", (v) => `${v}%`],
+        ["pointCoverage", "pointCoverageValue", (v) => `${v}%`],
+        ["pointOpacity", "pointOpacityValue", (v) => `${v}%`],
+        ["pointSize", "pointSizeValue", (v) => Number(v).toFixed(1)],
+        ["guideWidth", "guideWidthValue", (v) => `${v}%`],
+        ["guideHeight", "guideHeightValue", (v) => `${v}%`]
+      ];
+
+      const presets = {
+        gallery: {
+          pointCount: 260, irregularity: 78, clustering: 24,
+          centerLight: 88, centerRadius: 68, borderDark: 86,
+          opacityMin: 18, opacityMax: 78, lineOpacity: 12, lineWidth: 0.7
+        },
+        soft: {
+          pointCount: 230, irregularity: 62, clustering: 14,
+          centerLight: 94, centerRadius: 74, borderDark: 58,
+          opacityMin: 12, opacityMax: 58, lineOpacity: 8, lineWidth: 0.6
+        },
+        frame: {
+          pointCount: 280, irregularity: 82, clustering: 28,
+          centerLight: 92, centerRadius: 64, borderDark: 100,
+          opacityMin: 20, opacityMax: 88, lineOpacity: 14, lineWidth: 0.8
+        },
+        texture: {
+          pointCount: 390, irregularity: 94, clustering: 42,
+          centerLight: 72, centerRadius: 60, borderDark: 88,
+          opacityMin: 22, opacityMax: 90, lineOpacity: 18, lineWidth: 0.55
+        },
+        even: {
+          pointCount: 260, irregularity: 68, clustering: 10,
+          centerLight: 26, centerRadius: 58, borderDark: 28,
+          opacityMin: 22, opacityMax: 72, lineOpacity: 10, lineWidth: 0.65
+        }
+      };
+
+      const layerModes = {
+        "fills-lines": { showFills: true, showLines: true, showPoints: false },
+        fills: { showFills: true, showLines: false, showPoints: false },
+        lines: { showFills: false, showLines: true, showPoints: false },
+        points: { showFills: false, showLines: false, showPoints: true },
+        "lines-points": { showFills: false, showLines: true, showPoints: true },
+        "fills-points": { showFills: true, showLines: false, showPoints: true },
+        all: { showFills: true, showLines: true, showPoints: true }
+      };
+
+      let currentSeed = 2026;
+      let selectedVersion = null;
+      let versions = [];
+      let toastTimer = null;
+      let renderTimer = null;
+
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function lerp(a, b, t) {
+        return a + (b - a) * t;
+      }
+
+      function smoothstep(edge0, edge1, x) {
+        if (edge0 === edge1) return x < edge0 ? 0 : 1;
+        const t = clamp((x - edge0) / (edge1 - edge0), 0, 1);
+        return t * t * (3 - 2 * t);
+      }
+
+      function mulberry32(seed) {
+        let a = seed >>> 0;
+        return function random() {
+          a |= 0;
+          a = (a + 0x6D2B79F5) | 0;
+          let t = Math.imul(a ^ (a >>> 15), 1 | a);
+          t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+
+      function hashSeed(seed) {
+        let x = Number(seed) | 0;
+        x ^= x >>> 16;
+        x = Math.imul(x, 0x7feb352d);
+        x ^= x >>> 15;
+        x = Math.imul(x, 0x846ca68b);
+        x ^= x >>> 16;
+        return x >>> 0;
+      }
+
+      function gaussian(random) {
+        let u = 0;
+        let v = 0;
+        while (u === 0) u = random();
+        while (v === 0) v = random();
+        return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+      }
+
+      function randomSeed() {
+        if (window.crypto && crypto.getRandomValues) {
+          const array = new Uint32Array(1);
+          crypto.getRandomValues(array);
+          return array[0] % 1000000000;
+        }
+        return Math.floor(Math.random() * 1000000000);
+      }
+
+      function normalizeHex(value) {
+        return String(value || "#000000").toUpperCase();
+      }
+
+      function readSettings() {
+        let widthIn = Number(controls.widthIn.value);
+        let heightIn = Number(controls.heightIn.value);
+        if (!Number.isFinite(widthIn) || widthIn <= 0) widthIn = 40;
+        if (!Number.isFinite(heightIn) || heightIn <= 0) heightIn = 60;
+
+        const viewWidth = 1000;
+        const viewHeight = Math.max(250, Math.round(viewWidth * heightIn / widthIn));
+        let opacityMin = Number(controls.opacityMin.value) / 100;
+        let opacityMax = Number(controls.opacityMax.value) / 100;
+        if (opacityMin > opacityMax) [opacityMin, opacityMax] = [opacityMax, opacityMin];
+
+        return {
+          widthIn,
+          heightIn,
+          viewWidth,
+          viewHeight,
+          pointCount: Number(controls.pointCount.value),
+          irregularity: Number(controls.irregularity.value) / 100,
+          clustering: Number(controls.clustering.value) / 100,
+          centerLight: Number(controls.centerLight.value) / 100,
+          centerRadius: Number(controls.centerRadius.value) / 100,
+          borderDark: Number(controls.borderDark.value) / 100,
+          opacityMin,
+          opacityMax,
+          lineOpacity: Number(controls.lineOpacity.value) / 100,
+          lineWidth: Number(controls.lineWidth.value),
+          showFills: controls.showFills.checked,
+          showLines: controls.showLines.checked,
+          showPoints: controls.showPoints.checked,
+          fillCoverage: Number(controls.fillCoverage.value) / 100,
+          lineCoverage: Number(controls.lineCoverage.value) / 100,
+          pointCoverage: Number(controls.pointCoverage.value) / 100,
+          pointOpacity: Number(controls.pointOpacity.value) / 100,
+          pointSize: Number(controls.pointSize.value),
+          palette: {
+            white: normalizeHex(controls.colorWhite.value),
+            dark: normalizeHex(controls.colorDark.value),
+            sand: normalizeHex(controls.colorSand.value),
+            cream: normalizeHex(controls.colorCream.value)
+          }
+        };
+      }
+
+      function pushUnique(points, seen, x, y, width, height) {
+        x = clamp(x, 0, width);
+        y = clamp(y, 0, height);
+        const key = `${Math.round(x * 1000)}:${Math.round(y * 1000)}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          points.push({ x, y });
+        }
+      }
+
+      function generatePoints(settings, seed) {
+        const random = mulberry32(hashSeed(seed));
+        const { viewWidth: width, viewHeight: height, pointCount } = settings;
+        const points = [];
+        const seen = new Set();
+        const area = width * height;
+        const baseSpacing = Math.sqrt(area / pointCount);
+
+        const backboneShare = lerp(0.76, 0.38, settings.irregularity);
+        const backboneCount = Math.max(24, Math.round(pointCount * backboneShare));
+        const cols = Math.max(4, Math.round(Math.sqrt(backboneCount * width / height)));
+        const rows = Math.max(4, Math.ceil(backboneCount / cols));
+        const cellW = width / cols;
+        const cellH = height / rows;
+
+        for (let row = 0; row < rows && points.length < backboneCount; row++) {
+          for (let col = 0; col < cols && points.length < backboneCount; col++) {
+            const jitterX = (random() - 0.5) * cellW * settings.irregularity * 1.35;
+            const jitterY = (random() - 0.5) * cellH * settings.irregularity * 1.35;
+            const x = (col + 0.5) * cellW + jitterX;
+            const y = (row + 0.5) * cellH + jitterY;
+            pushUnique(points, seen, x, y, width, height);
+          }
+        }
+
+        const clusterCount = Math.max(3, Math.round(4 + settings.clustering * 9));
+        const clusterCenters = Array.from({ length: clusterCount }, () => ({
+          x: lerp(width * 0.08, width * 0.92, random()),
+          y: lerp(height * 0.06, height * 0.94, random()),
+          spread: baseSpacing * lerp(1.8, 5.4, random())
+        }));
+
+        let attempts = 0;
+        while (points.length < pointCount && attempts < pointCount * 40) {
+          attempts++;
+          let x;
+          let y;
+          if (random() < settings.clustering) {
+            const cluster = clusterCenters[Math.floor(random() * clusterCenters.length)];
+            x = cluster.x + gaussian(random) * cluster.spread;
+            y = cluster.y + gaussian(random) * cluster.spread;
+          } else {
+            x = random() * width;
+            y = random() * height;
+          }
+          if (x >= 0 && x <= width && y >= 0 && y <= height) {
+            pushUnique(points, seen, x, y, width, height);
+          }
+        }
+
+        while (points.length < pointCount) {
+          pushUnique(points, seen, random() * width, random() * height, width, height);
+        }
+
+        const edgeSpacing = baseSpacing * lerp(0.76, 0.54, settings.irregularity);
+        const xSegments = Math.max(4, Math.ceil(width / edgeSpacing));
+        const ySegments = Math.max(4, Math.ceil(height / edgeSpacing));
+
+        for (let i = 0; i <= xSegments; i++) {
+          const x = width * i / xSegments;
+          pushUnique(points, seen, x, 0, width, height);
+          pushUnique(points, seen, x, height, width, height);
+        }
+        for (let i = 0; i <= ySegments; i++) {
+          const y = height * i / ySegments;
+          pushUnique(points, seen, 0, y, width, height);
+          pushUnique(points, seen, width, y, width, height);
+        }
+
+        return points.sort((a, b) => (a.x - b.x) || (a.y - b.y));
+      }
+
+      function makeTriangle(a, b, c, points) {
+        const p1 = points[a];
+        const p2 = points[b];
+        const p3 = points[c];
+        const d = 2 * (
+          p1.x * (p2.y - p3.y) +
+          p2.x * (p3.y - p1.y) +
+          p3.x * (p1.y - p2.y)
+        );
+
+        if (Math.abs(d) < 1e-9) return null;
+
+        const p1Sq = p1.x * p1.x + p1.y * p1.y;
+        const p2Sq = p2.x * p2.x + p2.y * p2.y;
+        const p3Sq = p3.x * p3.x + p3.y * p3.y;
+
+        const cx = (
+          p1Sq * (p2.y - p3.y) +
+          p2Sq * (p3.y - p1.y) +
+          p3Sq * (p1.y - p2.y)
+        ) / d;
+        const cy = (
+          p1Sq * (p3.x - p2.x) +
+          p2Sq * (p1.x - p3.x) +
+          p3Sq * (p2.x - p1.x)
+        ) / d;
+        const dx = cx - p1.x;
+        const dy = cy - p1.y;
+
+        return { a, b, c, cx, cy, r2: dx * dx + dy * dy };
+      }
+
+      function triangulate(inputPoints) {
+        const points = inputPoints.map((point) => ({ x: point.x, y: point.y }));
+        const originalCount = points.length;
+        const xs = points.map((p) => p.x);
+        const ys = points.map((p) => p.y);
+        const minX = Math.min(...xs);
+        const maxX = Math.max(...xs);
+        const minY = Math.min(...ys);
+        const maxY = Math.max(...ys);
+        const dx = maxX - minX;
+        const dy = maxY - minY;
+        const delta = Math.max(dx, dy) || 1;
+        const midX = (minX + maxX) / 2;
+        const midY = (minY + maxY) / 2;
+
+        points.push(
+          { x: midX - 24 * delta, y: midY - 2 * delta },
+          { x: midX, y: midY + 24 * delta },
+          { x: midX + 24 * delta, y: midY - 2 * delta }
+        );
+
+        const superA = originalCount;
+        const superB = originalCount + 1;
+        const superC = originalCount + 2;
+        const initial = makeTriangle(superA, superB, superC, points);
+        let triangles = initial ? [initial] : [];
+
+        for (let pointIndex = 0; pointIndex < originalCount; pointIndex++) {
+          const point = points[pointIndex];
+          const boundaryEdges = new Map();
+          const survivors = [];
+
+          const addBoundaryEdge = (u, v) => {
+            const key = u < v ? `${u}:${v}` : `${v}:${u}`;
+            if (boundaryEdges.has(key)) boundaryEdges.delete(key);
+            else boundaryEdges.set(key, [u, v]);
+          };
+
+          for (const triangle of triangles) {
+            const ddx = point.x - triangle.cx;
+            const ddy = point.y - triangle.cy;
+            const inside = ddx * ddx + ddy * ddy <= triangle.r2 * (1 + 1e-10) + 1e-7;
+            if (inside) {
+              addBoundaryEdge(triangle.a, triangle.b);
+              addBoundaryEdge(triangle.b, triangle.c);
+              addBoundaryEdge(triangle.c, triangle.a);
+            } else {
+              survivors.push(triangle);
+            }
+          }
+
+          triangles = survivors;
+          for (const [u, v] of boundaryEdges.values()) {
+            const triangle = makeTriangle(u, v, pointIndex, points);
+            if (triangle) triangles.push(triangle);
+          }
+        }
+
+        return {
+          points: points.slice(0, originalCount),
+          triangles: triangles.filter((triangle) =>
+            triangle.a < originalCount && triangle.b < originalCount && triangle.c < originalCount
+          )
+        };
+      }
+
+      function weightedChoice(items, random) {
+        let total = 0;
+        for (const item of items) total += Math.max(0, item.weight);
+        if (total <= 0) return items[0].value;
+        let cursor = random() * total;
+        for (const item of items) {
+          cursor -= Math.max(0, item.weight);
+          if (cursor <= 0) return item.value;
+        }
+        return items[items.length - 1].value;
+      }
+
+      function radialMasks(x, y, settings) {
+        const nx = (x / settings.viewWidth - 0.5) / 0.5;
+        const ny = (y / settings.viewHeight - 0.5) / 0.5;
+        const radial = clamp(Math.sqrt(nx * nx + ny * ny), 0, 1.42);
+        const distance = clamp(radial, 0, 1);
+        const centerStart = Math.max(0.04, settings.centerRadius - 0.30);
+        return {
+          distance,
+          centerMask: 1 - smoothstep(centerStart, settings.centerRadius, distance),
+          borderMask: smoothstep(0.55, 1.0, distance)
+        };
+      }
+
+      function triangleAppearance(triangle, points, settings, random) {
+        const p1 = points[triangle.a];
+        const p2 = points[triangle.b];
+        const p3 = points[triangle.c];
+        const cx = (p1.x + p2.x + p3.x) / 3;
+        const cy = (p1.y + p2.y + p3.y) / 3;
+        const { distance, centerMask, borderMask } = radialMasks(cx, cy, settings);
+
+        let darkWeight = 0.025 + settings.borderDark * borderMask * 3.2;
+        darkWeight *= 1 - centerMask * settings.centerLight * 0.995;
+
+        let sandWeight = 0.38 + distance * 0.72 + borderMask * 0.35;
+        sandWeight *= 1 - centerMask * settings.centerLight * 0.48;
+
+        const creamWeight = 0.88 + centerMask * settings.centerLight * 2.8;
+        const whiteWeight = 0.46 + centerMask * settings.centerLight * 3.4;
+
+        const fill = weightedChoice([
+          { value: settings.palette.white, weight: whiteWeight },
+          { value: settings.palette.cream, weight: creamWeight },
+          { value: settings.palette.sand, weight: sandWeight },
+          { value: settings.palette.dark, weight: darkWeight }
+        ], random);
+
+        let opacity = lerp(settings.opacityMin, settings.opacityMax, Math.pow(random(), 0.84));
+        opacity *= 1 - centerMask * settings.centerLight * 0.42;
+        opacity *= 0.92 + borderMask * settings.borderDark * 0.16;
+        if (fill === settings.palette.dark) opacity *= 0.96 + borderMask * 0.15;
+        if (fill === settings.palette.white) opacity *= 0.80;
+        opacity = clamp(opacity, 0.035, 1);
+
+        return { fill, opacity };
+      }
+
+      function collectEdges(triangles) {
+        const edgeMap = new Map();
+        const addEdge = (a, b) => {
+          const first = Math.min(a, b);
+          const second = Math.max(a, b);
+          const key = `${first}:${second}`;
+          if (!edgeMap.has(key)) edgeMap.set(key, [first, second]);
+        };
+
+        for (const triangle of triangles) {
+          addEdge(triangle.a, triangle.b);
+          addEdge(triangle.b, triangle.c);
+          addEdge(triangle.c, triangle.a);
+        }
+        return Array.from(edgeMap.values());
+      }
+
+      function lineAppearance(a, b, settings, random) {
+        const x = (a.x + b.x) / 2;
+        const y = (a.y + b.y) / 2;
+        const { centerMask, borderMask } = radialMasks(x, y, settings);
+        let stroke;
+
+        const substantialFills = settings.showFills && settings.fillCoverage > 0.35;
+        if (substantialFills) {
+          stroke = random() < 0.84 ? settings.palette.white : settings.palette.cream;
+        } else {
+          stroke = weightedChoice([
+            { value: settings.palette.dark, weight: 0.34 + borderMask * settings.borderDark * 4.4 },
+            { value: settings.palette.sand, weight: 0.95 + (1 - centerMask) * 0.45 },
+            { value: settings.palette.cream, weight: 0.18 + centerMask * settings.centerLight * 0.85 }
+          ], random);
+        }
+
+        let opacity = settings.lineOpacity;
+        opacity *= lerp(0.54, 1.34, borderMask);
+        opacity *= 1 - centerMask * settings.centerLight * 0.76;
+        opacity *= lerp(0.72, 1.18, random());
+        if (!substantialFills) opacity *= 2.8;
+        return { stroke, opacity: clamp(opacity, 0, 1) };
+      }
+
+      function pointAppearance(point, settings, random) {
+        const { centerMask, borderMask } = radialMasks(point.x, point.y, settings);
+        const fill = weightedChoice([
+          { value: settings.palette.dark, weight: 0.26 + borderMask * settings.borderDark * 4.8 },
+          { value: settings.palette.sand, weight: 0.72 + (1 - centerMask) * 0.52 },
+          { value: settings.palette.cream, weight: 0.20 + centerMask * settings.centerLight * 0.80 },
+          { value: settings.palette.white, weight: 0.08 + centerMask * settings.centerLight * 0.38 }
+        ], random);
+
+        let opacity = settings.pointOpacity;
+        opacity *= lerp(0.44, 1.18, borderMask);
+        opacity *= 1 - centerMask * settings.centerLight * 0.68;
+        opacity *= lerp(0.72, 1.18, random());
+        if (settings.showFills) opacity *= 0.84;
+
+        const radius = settings.pointSize * lerp(0.68, 1.28, random()) * (1 + borderMask * 0.10);
+        return { fill, opacity: clamp(opacity, 0, 1), radius };
+      }
+
+      function buildArtwork(seed, settings = readSettings()) {
+        const geometryPoints = generatePoints(settings, seed);
+        const mesh = triangulate(geometryPoints);
+        const fillStyleRandom = mulberry32(hashSeed(seed ^ 0x51f15e5d));
+        const fillSelectRandom = mulberry32(hashSeed(seed ^ 0x2f9b4a13));
+        const lineStyleRandom = mulberry32(hashSeed(seed ^ 0x734ca921));
+        const lineSelectRandom = mulberry32(hashSeed(seed ^ 0x19660d8b));
+        const pointStyleRandom = mulberry32(hashSeed(seed ^ 0x46c87d55));
+        const pointSelectRandom = mulberry32(hashSeed(seed ^ 0x0f4a7c15));
+        const polygons = [];
+        const lines = [];
+        const circles = [];
+
+        for (const triangle of mesh.triangles) {
+          const p1 = mesh.points[triangle.a];
+          const p2 = mesh.points[triangle.b];
+          const p3 = mesh.points[triangle.c];
+          const appearance = triangleAppearance(triangle, mesh.points, settings, fillStyleRandom);
+          const include = fillSelectRandom() <= settings.fillCoverage;
+          if (settings.showFills && include) {
+            polygons.push(
+              `<polygon points="${p1.x.toFixed(3)},${p1.y.toFixed(3)} ${p2.x.toFixed(3)},${p2.y.toFixed(3)} ${p3.x.toFixed(3)},${p3.y.toFixed(3)}" fill="${appearance.fill}" fill-opacity="${appearance.opacity.toFixed(3)}"/>`
+            );
+          }
+        }
+
+        const edges = collectEdges(mesh.triangles);
+        for (const [aIndex, bIndex] of edges) {
+          const a = mesh.points[aIndex];
+          const b = mesh.points[bIndex];
+          const appearance = lineAppearance(a, b, settings, lineStyleRandom);
+          const include = lineSelectRandom() <= settings.lineCoverage;
+          if (settings.showLines && include && appearance.opacity > 0.001 && settings.lineWidth > 0) {
+            const substantialFills = settings.showFills && settings.fillCoverage > 0.35;
+            const renderedLineWidth = settings.lineWidth * (substantialFills ? 1 : 1.45);
+            lines.push(
+              `<line x1="${a.x.toFixed(3)}" y1="${a.y.toFixed(3)}" x2="${b.x.toFixed(3)}" y2="${b.y.toFixed(3)}" stroke="${appearance.stroke}" stroke-opacity="${appearance.opacity.toFixed(3)}" stroke-width="${renderedLineWidth.toFixed(3)}" stroke-linecap="round"/>`
+            );
+          }
+        }
+
+        for (const point of mesh.points) {
+          const appearance = pointAppearance(point, settings, pointStyleRandom);
+          const include = pointSelectRandom() <= settings.pointCoverage;
+          if (settings.showPoints && include && appearance.opacity > 0.001 && appearance.radius > 0) {
+            circles.push(
+              `<circle cx="${point.x.toFixed(3)}" cy="${point.y.toFixed(3)}" r="${appearance.radius.toFixed(3)}" fill="${appearance.fill}" fill-opacity="${appearance.opacity.toFixed(3)}"/>`
+            );
+          }
+        }
+
+        const layerMarkup = [
+          settings.showFills ? `<g id="triangle-fills" aria-label="Triangle fills" shape-rendering="geometricPrecision">${polygons.join("")}</g>` : "",
+          settings.showLines ? `<g id="mesh-lines" aria-label="Mesh lines" fill="none" shape-rendering="geometricPrecision">${lines.join("")}</g>` : "",
+          settings.showPoints ? `<g id="mesh-points" aria-label="Mesh points">${circles.join("")}</g>` : ""
+        ].join("");
+
+        const inner = [
+          `<rect id="background" x="0" y="0" width="${settings.viewWidth}" height="${settings.viewHeight}" fill="${settings.palette.cream}"/>`,
+          layerMarkup
+        ].join("");
+
+        return {
+          seed,
+          settings,
+          inner,
+          triangleCount: mesh.triangles.length,
+          pointCount: mesh.points.length,
+          edgeCount: edges.length,
+          renderedFillCount: polygons.length,
+          renderedLineCount: lines.length,
+          renderedPointCount: circles.length
+        };
+      }
+
+      function applyArtwork(version) {
+        selectedVersion = version;
+        currentSeed = version.seed;
+        controls.seedInput.value = String(currentSeed);
+        const svg = $("artwork");
+        svg.setAttribute("viewBox", `0 0 ${version.settings.viewWidth} ${version.settings.viewHeight}`);
+        svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+        svg.innerHTML = version.inner;
+        updateStageRatio(version.settings);
+        updateStatus(version);
+        highlightSelectedThumbnail();
+      }
+
+      function updateStageRatio(settings = readSettings()) {
+        const ratio = `${settings.widthIn} / ${settings.heightIn}`;
+        $("stage").style.aspectRatio = ratio;
+        $("variationGrid").style.setProperty("--art-ratio", ratio);
+        fitStage(settings);
+      }
+
+      function fitStage(settings = selectedVersion ? selectedVersion.settings : readSettings()) {
+        const stage = $("stage");
+        if (window.matchMedia("(max-width: 820px)").matches) {
+          stage.style.width = "";
+          stage.style.height = "";
+          return;
+        }
+
+        const shell = $("previewShell");
+        const styles = getComputedStyle(shell);
+        const availableWidth = shell.clientWidth - parseFloat(styles.paddingLeft) - parseFloat(styles.paddingRight);
+        const availableHeight = shell.clientHeight - parseFloat(styles.paddingTop) - parseFloat(styles.paddingBottom);
+        if (!(availableWidth > 0) || !(availableHeight > 0)) return;
+
+        const aspect = settings.widthIn / settings.heightIn;
+        let width = availableWidth;
+        let height = width / aspect;
+        if (height > availableHeight) {
+          height = availableHeight;
+          width = height * aspect;
+        }
+        stage.style.width = `${Math.max(1, Math.floor(width))}px`;
+        stage.style.height = `${Math.max(1, Math.floor(height))}px`;
+      }
+
+      function layerSummary(settings) {
+        const labels = [];
+        if (settings.showFills) labels.push(`fills ${Math.round(settings.fillCoverage * 100)}%`);
+        if (settings.showLines) labels.push(`lines ${Math.round(settings.lineCoverage * 100)}%`);
+        if (settings.showPoints) labels.push(`points ${Math.round(settings.pointCoverage * 100)}%`);
+        return labels.length ? labels.join(" + ") : "background only";
+      }
+
+      function updateStatus(version = selectedVersion) {
+        const settings = version ? version.settings : readSettings();
+        const seed = version ? version.seed : currentSeed;
+        const triangles = version ? version.triangleCount.toLocaleString() : "—";
+        const cmW = (settings.widthIn * 2.54).toFixed(1);
+        const cmH = (settings.heightIn * 2.54).toFixed(1);
+        $("statusMeta").textContent = `Seed ${seed} · ${triangles} triangles · ${layerSummary(settings)} · ${formatNumber(settings.widthIn)} × ${formatNumber(settings.heightIn)} in · ${cmW} × ${cmH} cm`;
+      }
+
+      function formatNumber(value) {
+        return Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 });
+      }
+
+      function setBusy(show, text = "Generating tessellation…") {
+        $("busyText").textContent = text;
+        $("busyOverlay").classList.toggle("show", show);
+        $("busyOverlay").setAttribute("aria-hidden", show ? "false" : "true");
+        document.querySelectorAll("button").forEach((button) => button.disabled = show);
+      }
+
+      function nextFrame() {
+        return new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
+      }
+
+      async function renderSingle(seed = currentSeed, message = "Generating tessellation…") {
+        setBusy(true, message);
+        await nextFrame();
+        try {
+          const version = buildArtwork(Number(seed) || 0);
+          applyArtwork(version);
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function renderVariationSet(useCurrentAsFirst = false) {
+        setBusy(true, "Generating six variations…");
+        await nextFrame();
+        try {
+          const settings = readSettings();
+          const baseSeed = useCurrentAsFirst ? currentSeed : randomSeed();
+          const generated = [];
+          for (let i = 0; i < 6; i++) {
+            const seed = i === 0 ? baseSeed : hashSeed(baseSeed + i * 104729) % 1000000000;
+            generated.push(buildArtwork(seed, settings));
+            await nextFrame();
+          }
+          versions = generated;
+          renderThumbnails();
+          applyArtwork(versions[0]);
+          $("variationStatus").textContent = `Seeds based on ${baseSeed}`;
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      function renderThumbnails() {
+        const grid = $("variationGrid");
+        grid.innerHTML = "";
+        for (const version of versions) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "variation";
+          button.dataset.seed = String(version.seed);
+          button.title = `Select seed ${version.seed}`;
+
+          const svg = document.createElementNS(SVG_NS, "svg");
+          svg.setAttribute("viewBox", `0 0 ${version.settings.viewWidth} ${version.settings.viewHeight}`);
+          svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+          svg.setAttribute("aria-hidden", "true");
+          svg.innerHTML = version.inner;
+
+          const badge = document.createElement("span");
+          badge.textContent = `#${version.seed}`;
+          button.append(svg, badge);
+          button.addEventListener("click", () => applyArtwork(version));
+          grid.appendChild(button);
+        }
+        updateStageRatio();
+        highlightSelectedThumbnail();
+      }
+
+      function highlightSelectedThumbnail() {
+        document.querySelectorAll(".variation").forEach((button) => {
+          button.classList.toggle("selected", Number(button.dataset.seed) === Number(currentSeed));
+        });
+      }
+
+      function setLayerMode(mode) {
+        const configuration = layerModes[mode];
+        if (!configuration) return;
+        controls.showFills.checked = configuration.showFills;
+        controls.showLines.checked = configuration.showLines;
+        controls.showPoints.checked = configuration.showPoints;
+        controls.layerMode.value = mode;
+      }
+
+      function syncLayerModeFromToggles() {
+        const match = Object.entries(layerModes).find(([, configuration]) =>
+          configuration.showFills === controls.showFills.checked &&
+          configuration.showLines === controls.showLines.checked &&
+          configuration.showPoints === controls.showPoints.checked
+        );
+        controls.layerMode.value = match ? match[0] : "custom";
+      }
+
+      function updateLabels() {
+        for (const [controlId, outputId, formatter] of valueBindings) {
+          $(outputId).textContent = formatter($(controlId).value);
+        }
+
+        for (const id of ["colorWhite", "colorDark", "colorSand", "colorCream"]) {
+          $(`${id}Code`).textContent = normalizeHex($(id).value);
+        }
+
+        const width = Number(controls.widthIn.value) || 40;
+        const height = Number(controls.heightIn.value) || 60;
+        $("metricSize").textContent = `${(width * 2.54).toFixed(1)} × ${(height * 2.54).toFixed(1)} cm`;
+
+        const pngWidth = Number(controls.pngWidth.value);
+        const pngHeight = Math.round(pngWidth * height / width);
+        const approximatePpi = Math.round(pngWidth / width);
+        $("pngDimensions").textContent = `${pngWidth.toLocaleString()} × ${pngHeight.toLocaleString()} px · approx. ${approximatePpi} ppi`;
+
+        const safeGuide = $("safeGuide");
+        safeGuide.style.opacity = controls.guideToggle.checked ? "1" : "0";
+        safeGuide.style.width = `${controls.guideWidth.value}%`;
+        safeGuide.style.height = `${controls.guideHeight.value}%`;
+      }
+
+      function scheduleRender() {
+        clearTimeout(renderTimer);
+        renderTimer = setTimeout(() => renderSingle(currentSeed, "Applying settings…"), 180);
+      }
+
+      function applyPreset(name) {
+        const preset = presets[name];
+        if (!preset) return;
+        for (const [key, value] of Object.entries(preset)) {
+          if (controls[key]) controls[key].value = String(value);
+        }
+        updateLabels();
+        renderSingle(currentSeed, "Applying preset…");
+      }
+
+      function exportSvgString(outputSize = null) {
+        if (!selectedVersion) throw new Error("No artwork is selected.");
+        const settings = selectedVersion.settings;
+        const svg = document.createElementNS(SVG_NS, "svg");
+        svg.setAttribute("xmlns", SVG_NS);
+        svg.setAttribute("version", "1.1");
+        if (outputSize) {
+          svg.setAttribute("width", String(outputSize.width));
+          svg.setAttribute("height", String(outputSize.height));
+        } else {
+          svg.setAttribute("width", `${formatNumber(settings.widthIn)}in`);
+          svg.setAttribute("height", `${formatNumber(settings.heightIn)}in`);
+        }
+        svg.setAttribute("viewBox", `0 0 ${settings.viewWidth} ${settings.viewHeight}`);
+        svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+        svg.setAttribute("role", "img");
+        svg.setAttribute("aria-label", "SIGGRAPH 2026 Delaunay tessellation background");
+
+        const title = document.createElementNS(SVG_NS, "title");
+        title.textContent = `SIGGRAPH 2026 Delaunay background — seed ${selectedVersion.seed}`;
+        const desc = document.createElementNS(SVG_NS, "desc");
+        desc.textContent = `Portrait Delaunay tessellation using #FFFFFF, #2A4249, #D2C5B2 and #F1EFE3, with a pale center, darker perimeter, and ${layerSummary(settings)}.`;
+        const metadata = document.createElementNS(SVG_NS, "metadata");
+        metadata.textContent = JSON.stringify({
+          generator: "SIGGRAPH 2026 Delaunay Background Generator",
+          seed: selectedVersion.seed,
+          widthIn: settings.widthIn,
+          heightIn: settings.heightIn,
+          triangleCount: selectedVersion.triangleCount,
+          edgeCount: selectedVersion.edgeCount,
+          pointCount: selectedVersion.pointCount,
+          layers: {
+            fills: settings.showFills,
+            lines: settings.showLines,
+            points: settings.showPoints,
+            fillCoverage: settings.fillCoverage,
+            lineCoverage: settings.lineCoverage,
+            pointCoverage: settings.pointCoverage
+          },
+          palette: settings.palette
+        });
+
+        svg.append(title, desc, metadata);
+        const content = document.createElementNS(SVG_NS, "g");
+        content.innerHTML = selectedVersion.inner;
+        while (content.firstChild) svg.appendChild(content.firstChild);
+
+        return `<?xml version="1.0" encoding="UTF-8"?>\n${new XMLSerializer().serializeToString(svg)}`;
+      }
+
+      function safeFilePart(value) {
+        return String(value).replace(/[^a-zA-Z0-9._-]+/g, "-");
+      }
+
+      function baseFilename(extension) {
+        const settings = selectedVersion.settings;
+        const layers = [
+          settings.showFills ? "fills" : "",
+          settings.showLines ? "lines" : "",
+          settings.showPoints ? "points" : ""
+        ].filter(Boolean).join("-") || "background";
+        return `siggraph-2026-delaunay-${layers}-seed-${safeFilePart(selectedVersion.seed)}-${safeFilePart(formatNumber(settings.widthIn))}x${safeFilePart(formatNumber(settings.heightIn))}in.${extension}`;
+      }
+
+      function triggerDownload(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = filename;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+      }
+
+      function downloadSvg() {
+        try {
+          const svgText = exportSvgString();
+          triggerDownload(new Blob([svgText], { type: "image/svg+xml;charset=utf-8" }), baseFilename("svg"));
+          showToast("SVG downloaded at the selected physical dimensions.");
+        } catch (error) {
+          showToast(error.message || "Could not export SVG.");
+        }
+      }
+
+      async function downloadPng() {
+        if (!selectedVersion) return;
+        const width = Number(controls.pngWidth.value);
+        const ratio = selectedVersion.settings.heightIn / selectedVersion.settings.widthIn;
+        const height = Math.round(width * ratio);
+        const megapixels = width * height / 1e6;
+        if (megapixels > 65) {
+          showToast("That PNG exceeds the browser-safe 65 megapixel limit. Choose a smaller PNG width or use SVG for production.");
+          return;
+        }
+
+        setBusy(true, `Rendering ${width.toLocaleString()} × ${height.toLocaleString()} PNG…`);
+        await nextFrame();
+        try {
+          const svgText = exportSvgString({ width, height });
+          const blob = new Blob([svgText], { type: "image/svg+xml;charset=utf-8" });
+          const url = URL.createObjectURL(blob);
+          const image = new Image();
+
+          await new Promise((resolve, reject) => {
+            image.onload = resolve;
+            image.onerror = () => reject(new Error("The browser could not rasterize the SVG."));
+            image.src = url;
+          });
+
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const context = canvas.getContext("2d", { alpha: false });
+          if (!context) throw new Error("Canvas rendering is unavailable in this browser.");
+          context.drawImage(image, 0, 0, width, height);
+          URL.revokeObjectURL(url);
+
+          const pngBlob = await new Promise((resolve, reject) => {
+            canvas.toBlob((result) => result ? resolve(result) : reject(new Error("PNG encoding failed.")), "image/png");
+          });
+          triggerDownload(pngBlob, baseFilename("png"));
+          showToast(`PNG downloaded at ${width.toLocaleString()} × ${height.toLocaleString()} px.`);
+        } catch (error) {
+          showToast(error.message || "Could not export PNG.");
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      function showToast(message) {
+        const toast = $("toast");
+        toast.textContent = message;
+        toast.classList.add("show");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove("show"), 3200);
+      }
+
+      valueBindings.forEach(([controlId]) => {
+        $(controlId).addEventListener("input", updateLabels);
+        $(controlId).addEventListener("change", () => {
+          updateLabels();
+          if (!["guideWidth", "guideHeight"].includes(controlId)) scheduleRender();
+        });
+      });
+
+      ["colorWhite", "colorDark", "colorSand", "colorCream"].forEach((id) => {
+        $(id).addEventListener("input", updateLabels);
+        $(id).addEventListener("change", scheduleRender);
+      });
+
+      ["widthIn", "heightIn"].forEach((id) => {
+        $(id).addEventListener("input", updateLabels);
+        $(id).addEventListener("change", () => {
+          updateLabels();
+          scheduleRender();
+        });
+      });
+
+      controls.pngWidth.addEventListener("change", updateLabels);
+      controls.guideToggle.addEventListener("change", updateLabels);
+      controls.preset.addEventListener("change", () => applyPreset(controls.preset.value));
+      controls.layerMode.addEventListener("change", () => {
+        if (controls.layerMode.value === "custom") return;
+        setLayerMode(controls.layerMode.value);
+        updateLabels();
+        scheduleRender();
+      });
+      [controls.showFills, controls.showLines, controls.showPoints].forEach((control) => {
+        control.addEventListener("change", () => {
+          syncLayerModeFromToggles();
+          updateLabels();
+          scheduleRender();
+        });
+      });
+
+      $("newVersion").addEventListener("click", () => {
+        currentSeed = randomSeed();
+        controls.seedInput.value = String(currentSeed);
+        renderSingle(currentSeed, "Generating a new version…");
+      });
+
+      $("generateSet").addEventListener("click", () => renderVariationSet(false));
+      $("applySeed").addEventListener("click", () => {
+        currentSeed = Number(controls.seedInput.value) || 0;
+        renderSingle(currentSeed, "Rendering entered seed…");
+      });
+      $("downloadSvg").addEventListener("click", downloadSvg);
+      $("downloadPng").addEventListener("click", downloadPng);
+
+      syncLayerModeFromToggles();
+      updateLabels();
+
+      if ("ResizeObserver" in window) {
+        const stageObserver = new ResizeObserver(() => fitStage());
+        stageObserver.observe($("previewShell"));
+      }
+      window.addEventListener("resize", () => fitStage());
+
+      renderVariationSet(true);
+    })();
+  </script>
+</body>
+</html>
