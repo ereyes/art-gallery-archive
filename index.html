@@ -18,6 +18,86 @@
     <link rel="shortcut icon" href="./favicon.svg" />
     <link rel="icon" href="./favicon.svg" />
     <script src="./_next/static/chunks/polyfills-42372ed130431b0a.js" noModule=""></script>
+<style id="special-thanks-styles">
+  .site-credits.site-credits-with-thanks {
+    display: block;
+    padding: clamp(3.5rem, 7vw, 7rem) clamp(1.25rem, 3vw, 3rem)
+      clamp(2.5rem, 5vw, 4.5rem);
+  }
+
+  .site-thanks {
+    width: min(100%, 100rem);
+    margin-inline: auto;
+  }
+
+  .site-thanks-kicker {
+    margin: 0;
+    color: var(--signal, #dfff00);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    line-height: 1.3;
+  }
+
+  .site-thanks h2 {
+    max-width: 11ch;
+    margin: 0.55rem 0 0;
+    color: var(--ink, #f1efe3);
+    font-size: clamp(3rem, 7vw, 7rem);
+    font-weight: 300;
+    letter-spacing: -0.065em;
+    line-height: 0.92;
+  }
+
+  .site-thanks-groups {
+    margin-top: clamp(2.5rem, 5vw, 5rem);
+    border-top: 1px solid rgba(241, 239, 227, 0.22);
+  }
+
+  .site-thanks-group {
+    display: block;
+    margin: 0;
+    padding: clamp(1.15rem, 2vw, 1.7rem) 0;
+    border-bottom: 1px solid rgba(241, 239, 227, 0.16);
+    color: rgba(241, 239, 227, 0.82);
+    font-size: clamp(0.88rem, 1.05vw, 1rem);
+    font-weight: 500;
+    letter-spacing: 0.012em;
+    line-height: 1.75;
+  }
+
+  .site-thanks-label {
+    display: block;
+    margin-bottom: 0.35rem;
+    color: var(--signal, #dfff00);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.07em;
+    line-height: 1.4;
+  }
+
+  .site-credits-with-thanks .site-credits-bottom {
+    display: grid;
+    grid-template-columns: minmax(0, 0.7fr) minmax(20rem, 1fr);
+    gap: clamp(2rem, 8vw, 8rem);
+    align-items: end;
+    width: min(100%, 100rem);
+    margin: clamp(3rem, 6vw, 6rem) auto 0;
+    padding-top: clamp(2rem, 4vw, 3.5rem);
+    border-top: 1px solid rgba(241, 239, 227, 0.22);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    line-height: 1.6;
+  }
+
+  @media (max-width: 620px) {
+    .site-credits-with-thanks .site-credits-bottom {
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+  }
+</style>
 </head>
 
 <body>
@@ -2629,6 +2709,107 @@
     <script>self.__next_f.push([1, "1e:[\"$\",\"div\",null,{\"className\":\"published-preface-links\",\"children\":[[\"$\",\"a\",null,{\"className\":\"published-preface-link\",\"href\":\"./media/texts/preface.pdf\",\"target\":\"_blank\",\"rel\":\"noreferrer\",\"children\":[[\"$\",\"span\",null,{\"children\":\"Open the Preface PDF\"}],[\"$\",\"span\",null,{\"aria-hidden\":\"true\",\"children\":\"↗\"}]]}],[\"$\",\"a\",null,{\"className\":\"published-preface-link\",\"href\":\"https://dl.acm.org/doi/proceedings/10.1145/3799824\",\"target\":\"_blank\",\"rel\":\"noreferrer\",\"children\":[[\"$\",\"span\",null,{\"children\":\"View in the ACM Digital Library\"}],[\"$\",\"span\",null,{\"aria-hidden\":\"true\",\"children\":\"↗\"}]]}]]}]\n1f:[\"$\",\"a\",null,{\"className\":\"section-return section-return-light\",\"href\":\"#top\",\"children\":[[\"$\",\"span\",null,{\"children\":\"Back to the Beginning\"}],[\"$\",\"span\",null,{\"aria-hidden\":\"true\",\"children\":\"↑\"}]]}]\n27:[\"$\",\"p\",null,{\"children\":\"A creative-coding newsletter issue reflecting on work and play, WebGPU, and encounters at SIGGRAPH 2026.\"}]\n28:[\"$\",\"span\",null,{\"className\":\"related-link-arrow\",\"aria-hidden\":\"true\",\"children\":\"↗\"}]\n29:[\"$\",\"a\",null,{\"className\":\"section-return section-return-dark\",\"href\":\"#top\",\"children\":[[\"$\",\"span\",null,{\"children\":\"Back to the Beginning\"}],[\"$\",\"span\",null,{\"aria-hidden\":\"true\",\"children\":\"↑\"}]]}]\n"])</script>
     <script>self.__next_f.push([1, "2e:[[\"$\",\"meta\",\"0\",{\"charSet\":\"utf-8\"}],[\"$\",\"meta\",\"1\",{\"name\":\"viewport\",\"content\":\"width=device-width, initial-scale=1\"}]]\n"])</script>
     <script>self.__next_f.push([1, "31:I[6599,[],\"IconMark\"]\n2c:null\n30:[[\"$\",\"title\",\"0\",{\"children\":\"In-Betweens — SIGGRAPH 2026 Art Gallery Archive\"}],[\"$\",\"meta\",\"1\",{\"name\":\"description\",\"content\":\"The archive of In-Betweens, the ACM SIGGRAPH 2026 Art Gallery in Los Angeles.\"}],[\"$\",\"link\",\"2\",{\"rel\":\"shortcut icon\",\"href\":\"./favicon.svg\"}],[\"$\",\"link\",\"3\",{\"rel\":\"icon\",\"href\":\"./favicon.svg\"}],[\"$\",\"$L31\",\"4\",{}]]\n"])</script>
+<template id="special-thanks-template">
+  <section
+    class="site-thanks"
+    id="site-thanks"
+    aria-labelledby="site-thanks-title"
+  >
+    <p class="site-thanks-kicker">Credits and Acknowledgments</p>
+    <h2 id="site-thanks-title">Special Thanks</h2>
+
+    <div class="site-thanks-groups">
+      <p class="site-thanks-group">
+        <span class="site-thanks-label">Conference Chair</span>
+        <span>Chris Redmann</span>
+      </p>
+
+      <p class="site-thanks-group">
+        <span class="site-thanks-label">Jury</span>
+        <span>
+          Rebecca Strzelec · Juergen Hagler · Yoichiro Katsumoto · Avital Meshi
+          · Gabriela Aceves · Robert Twomey · Philippe Pasquier · Anastasia
+          Tyurina · Yoon Chung Han · Şölen Kiratli
+        </span>
+      </p>
+
+      <p class="site-thanks-group">
+        <span class="site-thanks-label">Advisory Reviewers</span>
+        <span>
+          Angus Forbes · Behnaz Farahi · Clarissa Ribeiro · Claudia Mosqueda ·
+          Cynthia B. Rubin · Florent Di Bartolo · Jack Stenner · Jonah
+          Brucker-Cohen · Johnny Di Blasi · Josh Rodenberg · Nik Aberle · Tobias
+          Klein · Daria Tsoupikova · Bill Miller · Andrea Sosa · Scottie Huang ·
+          Jiabao Li · Laura Cinti · Jiayi Young · Haru Ji · Blanka Domagalska ·
+          Gustavo Rincón · Hyeon Nam · Paul Magee · Giuseppe Torre
+        </span>
+      </p>
+
+      <p class="site-thanks-group">
+        <span class="site-thanks-label">
+          Conference Support and Contractors
+        </span>
+        <span>
+          Stephen Spencer · Conference Administration · Conference Management ·
+          Event Marketing · Freeman Logistics · Linklings Content Management ·
+          Tradeshow Logic
+        </span>
+      </p>
+
+      <p class="site-thanks-group">
+        <span class="site-thanks-label">Contributors</span>
+        <span>
+          Tetsuaki Baba · Alvaro Cassinelli · Jeyun Cloud · Stejara Dinulescu ·
+          Diarmid Flatley · Juergen Hagler · Yoon Chung Han · Tobias Klein ·
+          Jiabao Li · Pinyao Liu · Rodger Luo · Nefeli Manoudaki · Avital Meshi
+          · Ryuichi Ono · Sihwa Park · Iason Paterakis · Koi Ren · Catharina
+          Santasilia · Will Tallent · Mert Toka · Joey Verbeke · Shirley Wu ·
+          Ziqian Yin · Weidi Zhang
+        </span>
+      </p>
+    </div>
+  </section>
+</template>
+
+<script id="special-thanks-insertion">
+  (() => {
+    const insertSpecialThanks = () => {
+      const footer = document.querySelector("footer.site-credits");
+      const template = document.getElementById("special-thanks-template");
+
+      if (!footer || !template || footer.querySelector("#site-thanks")) {
+        return;
+      }
+
+      const bottom = document.createElement("div");
+      bottom.className = "site-credits-bottom";
+
+      const identity = footer.querySelector(
+        ":scope > .site-credits-identity"
+      );
+      const notes = footer.querySelector(":scope > .site-credits-notes");
+
+      if (identity) bottom.append(identity);
+      if (notes) bottom.append(notes);
+
+      footer.classList.add("site-credits-with-thanks");
+      footer.append(template.content.cloneNode(true), bottom);
+      template.remove();
+    };
+
+    const insertAfterHydration = () => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(insertSpecialThanks);
+      });
+    };
+
+    if (document.readyState === "complete") {
+      insertAfterHydration();
+    } else {
+      window.addEventListener("load", insertAfterHydration, { once: true });
+    }
+  })();
+</script>
 </body>
 
 </html>
